@@ -2,7 +2,7 @@
 
 **Project: CORE**, temel C# programlama mantığını siber güvenlik ve yapay zeka temalı etkileşimli bir hikaye üzerinden öğreten, web tabanlı bir eğitim simülasyonudur. Oyuncular (Ajanlar), uzay istasyonundaki hasarlı bir yapay zekayı onarmak için C# kodları yazarak görevleri tamamlamaya çalışırlar.
 
-🌐 **[Project: CORE'u Canlı Oyna](https://project-core-game.vercel.app/)
+🌐[Project: CORE'u Canlı Oyna](https://project-core-game.vercel.app/)
 
 ## 🚀 Özellikler
 
