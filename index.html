@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project: CORE - C# Training Simulator</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg width='32' height='32' viewBox='0 0 8 6' xmlns='http://www.w3.org/2000/svg' shape-rendering='crispEdges'><rect x='0' y='0' width='8' height='6' fill='%23111'/><rect x='1' y='2' width='6' height='4' fill='%23ffcc99'/><rect x='1' y='2' width='6' height='1' fill='%23000'/><rect x='2' y='3' width='4' height='1' fill='%2300ff41'/></svg>">
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap');
+
+        :root {
+            --bg-color: #050505; --panel-bg: #0a0e14; --neon-green: #00ff41; --neon-blue: #00f0ff;
+            --neon-red: #ff003c; --neon-gold: #ffd700; --neon-purple: #b100ff;
+            --text-color: #d4d4d4; --border-color: #333;
+        }
+
+        body {
+            background-color: var(--bg-color); color: var(--text-color);
+            font-family: 'JetBrains Mono', monospace; margin: 0; padding: 20px;
+            display: flex; height: 100vh; box-sizing: border-box; overflow: hidden; position: relative;
+        }
+
+        .fullscreen-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: var(--bg-color); z-index: 10; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
+        h1.glitch-text { color: var(--neon-green); font-size: 3.5rem; margin-bottom: 5px; text-shadow: 0 0 15px rgba(0, 255, 65, 0.6); letter-spacing: 2px; }
+        .fullscreen-overlay h3 { color: var(--neon-blue); margin-bottom: 40px; font-weight: normal; }
+        .pixel-art-container { margin-bottom: 30px; filter: drop-shadow(0 0 10px rgba(0, 255, 65, 0.4)); }
+
+        .btn-main { background-color: transparent; color: var(--neon-green); border: 2px solid var(--neon-green); padding: 15px 40px; font-size: 1.2rem; font-family: 'JetBrains Mono', monospace; cursor: pointer; transition: all 0.3s; text-transform: uppercase; }
+        .btn-main:hover { background-color: var(--neon-green); color: var(--bg-color); box-shadow: 0 0 20px var(--neon-green); }
+
+        #login-screen { display: none; }
+        .input-group { display: flex; flex-direction: column; align-items: center; gap: 15px; }
+        .input-group input { background-color: #111; border: 1px solid var(--neon-blue); color: var(--neon-blue); padding: 15px; font-size: 1.2rem; font-family: 'JetBrains Mono', monospace; text-align: center; width: 300px; outline: none; }
+        .input-group input:focus { box-shadow: 0 0 15px rgba(0, 240, 255, 0.3); }
+
+        #leaderboard-screen { display: none; z-index: 15; }
+        .leaderboard-table { width: 600px; max-width: 90%; border-collapse: collapse; margin-bottom: 30px; background-color: var(--panel-bg); border: 1px solid var(--neon-gold); box-shadow: 0 0 20px rgba(255, 215, 0, 0.2); }
+        .leaderboard-table th, .leaderboard-table td { padding: 15px; border-bottom: 1px solid #333; text-align: left; }
+        .leaderboard-table th { color: var(--neon-gold); font-size: 1.1rem; border-bottom: 2px solid var(--neon-gold); }
+        .leaderboard-table tr:nth-child(1) td { color: var(--neon-gold); font-weight: bold; }
+        .leaderboard-table tr:nth-child(2) td { color: silver; }
+        .leaderboard-table tr:nth-child(3) td { color: #cd7f32; }
+
+        #game-container { display: none; width: 100%; gap: 20px; z-index: 5; }
+        .panel { background-color: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 5px; display: flex; flex-direction: column; box-shadow: 0 0 15px rgba(0, 255, 65, 0.1); }
+        #terminal-panel { flex: 1; padding: 20px; overflow-y: auto; position: relative; }
+        #terminal-output { white-space: pre-wrap; line-height: 1.5; margin-bottom: 20px; }
+        
+        .system-msg { color: var(--neon-blue); }
+        .error-msg { color: var(--neon-red); }
+        .success-msg { color: var(--neon-green); font-weight: bold; }
+        .mentor-msg { color: #f39c12; font-style: italic; }
+        .cursor { display: inline-block; width: 8px; height: 15px; background-color: var(--neon-green); animation: blink 1s step-end infinite; }
+        @keyframes blink { 50% { opacity: 0; } }
+
+        #editor-panel { flex: 1; display: flex; flex-direction: column; }
+        .header { padding: 10px 20px; background-color: #111; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; color: var(--neon-green); }
+        .nav-controls { display: flex; align-items: center; gap: 15px; }
+        .nav-btn { background: none; border: 1px solid var(--neon-blue); color: var(--neon-blue); padding: 2px 10px; cursor: pointer; transition: all 0.2s; }
+        .nav-btn:hover:not(:disabled) { background: var(--neon-blue); color: var(--bg-color); }
+        .nav-btn:disabled { opacity: 0.3; cursor: not-allowed; border-color: var(--border-color); color: var(--border-color); }
+        .stats { display: flex; gap: 20px; }
+        #score-counter { color: var(--neon-gold); font-weight: bold; }
+        
+        .editor-wrapper { position: relative; flex: 1; display: flex; flex-direction: column; }
+        #code-editor { flex: 1; background-color: transparent; color: var(--text-color); font-family: 'JetBrains Mono', monospace; font-size: 14px; padding: 20px; border: none; resize: none; outline: none; line-height: 1.5; z-index: 1; }
+        
+        #editor-overlay { 
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
+            background-color: transparent; color: var(--text-color);
+            font-family: 'JetBrains Mono', monospace; font-size: 14px; 
+            padding: 20px; box-sizing: border-box; display: none; 
+            white-space: pre-wrap; word-wrap: break-word; pointer-events: none; 
+            line-height: 1.5; z-index: 2;
+        }
+
+        .code-green { color: var(--neon-green); text-shadow: 0 0 5px var(--neon-green); font-weight: bold; }
+        .code-red { color: var(--neon-red); text-shadow: 0 0 5px var(--neon-red); background-color: rgba(255,0,0,0.15); border-radius: 2px;}
+
+        .controls { padding: 15px; border-top: 1px solid var(--border-color); display: flex; gap: 10px; }
+        button.action-btn { background-color: transparent; color: var(--neon-green); border: 1px solid var(--neon-green); padding: 10px 20px; font-family: 'JetBrains Mono', monospace; cursor: pointer; transition: all 0.3s; }
+        button.action-btn:hover:not(:disabled) { background-color: var(--neon-green); color: var(--bg-color); }
+        button#btn-help { color: var(--neon-red); border-color: var(--neon-red); }
+        button#btn-help:hover:not(:disabled) { background-color: var(--neon-red); color: white; }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* --- ADMIN PANELİ (GOD MODE) --- */
+        #admin-panel { display: none; width: 100%; height: 100%; z-index: 20; background-color: var(--bg-color); padding: 20px; box-sizing: border-box; flex-direction: column; gap: 20px; position: absolute; top:0; left:0; }
+        .admin-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--neon-purple); padding-bottom: 15px; }
+        .admin-header h1 { margin: 0; color: var(--neon-purple); text-shadow: 0 0 10px var(--neon-purple); font-size: 2rem; }
+        .admin-btn { background: transparent; border: 1px solid var(--neon-purple); color: var(--neon-purple); padding: 8px 15px; cursor: pointer; font-family: inherit; transition: 0.3s; }
+        .admin-btn:hover { background: var(--neon-purple); color: white; }
+        .admin-btn.danger { border-color: var(--neon-red); color: var(--neon-red); }
+        .admin-btn.danger:hover { background: var(--neon-red); color: white; }
+        
+        .admin-grid { display: flex; gap: 20px; flex: 1; overflow: hidden; }
+        .admin-left-col { flex: 0.4; display: flex; flex-direction: column; gap: 20px; }
+        .admin-right-col { flex: 0.6; display: flex; flex-direction: column; }
+        .admin-box { flex: 1; border: 1px solid var(--border-color); background: #080808; display: flex; flex-direction: column; padding: 15px; border-radius: 5px; }
+        .admin-box h3 { margin-top: 0; color: var(--text-color); border-bottom: 1px solid #333; padding-bottom: 10px; display:flex; justify-content:space-between; align-items:center; }
+        
+        #live-feed { flex: 1; overflow-y: auto; font-size: 0.9rem; line-height: 1.6; }
+        .log-entry { margin-bottom: 5px; border-left: 2px solid var(--neon-purple); padding-left: 10px; }
+        .log-time { color: #888; font-size: 0.8rem; margin-right: 10px; }
+        .log-user { color: var(--neon-blue); font-weight: bold; }
+        .log-action { color: var(--text-color); }
+        .log-action.typing { color: var(--neon-gold); }
+        .log-action.error { color: var(--neon-red); }
+        .log-action.success { color: var(--neon-green); }
+
+        #admin-leaderboard-body td { padding: 8px; border-bottom: 1px solid #222; }
+
+        select#admin-agent-select { background: #111; color: var(--neon-blue); padding: 5px 10px; border: 1px solid var(--neon-blue); outline: none; font-family: 'JetBrains Mono', monospace; cursor: pointer; }
+        .watch-container { display: flex; gap: 15px; flex: 1; margin-top: 10px; overflow: hidden; }
+        .watch-box { flex: 1; background: #050505; border: 1px solid #333; padding: 15px; overflow-y: auto; color: var(--text-color); font-family: 'JetBrains Mono', monospace; line-height: 1.5; white-space: pre-wrap; }
+        .watch-code { resize: none; outline: none; width: 100%; height: 100%; box-sizing: border-box; }
+        
+        #admin-watch-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: transparent; color: var(--text-color); padding: 15px; display: none; white-space: pre-wrap; word-wrap: break-word; pointer-events: none; z-index: 5; line-height: 1.5; font-family: 'JetBrains Mono', monospace; box-sizing: border-box; }
+
+        body::after { content: " "; display: block; position: absolute; top: 0; left: 0; bottom: 0; right: 0; background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06)); z-index: 2; background-size: 100% 2px, 3px 100%; pointer-events: none; }
+    </style>
+</head>
+<body>
+
+    <div id="start-screen" class="fullscreen-overlay">
+        <div class="pixel-art-container">
+            <svg width="160" height="160" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges">
+                <rect x="8" y="2" width="16" height="28" fill="#00ff41" opacity="0.05"/>
+                <rect x="11" y="29" width="4" height="2" fill="#111"/><rect x="17" y="29" width="4" height="2" fill="#111"/>
+                <rect x="12" y="20" width="3" height="9" fill="#1a1a1a"/><rect x="17" y="20" width="3" height="9" fill="#1a1a1a"/><rect x="12" y="18" width="8" height="3" fill="#1a1a1a"/>
+                <rect x="10" y="10" width="12" height="9" fill="#222"/><rect x="15" y="11" width="2" height="8" fill="#333"/>
+                <rect x="8" y="10" width="2" height="7" fill="#222"/><rect x="22" y="10" width="2" height="7" fill="#222"/>
+                <rect x="8" y="17" width="2" height="2" fill="#ffcc99"/><rect x="22" y="17" width="2" height="2" fill="#ffcc99"/>
+                <rect x="6" y="14" width="6" height="4" fill="#444"/><rect x="7" y="15" width="4" height="2" fill="#00ff41" opacity="0.8"/>
+                <rect x="12" y="4" width="8" height="6" fill="#111"/><rect x="13" y="6" width="6" height="4" fill="#ffcc99"/>
+                <rect x="13" y="6" width="6" height="1" fill="#000"/><rect x="14" y="7" width="4" height="1" fill="#00ff41"/>
+            </svg>
+        </div>
+        <h1 class="glitch-text">Project: CORE</h1>
+        <h3>Created by Çağlar Sapmaz</h3>
+        <button class="btn-main" onclick="goToLogin()">Sisteme Bağlan</button>
+    </div>
+
+    <div id="login-screen" class="fullscreen-overlay">
+        <h1 class="glitch-text">Bağlantı Protokolü</h1>
+        <h3>Kimliğini Doğrula</h3>
+        <div class="input-group">
+            <input type="text" id="player-nickname" placeholder="_NICKNAME GİRİNİZ" autocomplete="off" maxlength="15">
+            <button class="btn-main" onclick="initGame()">Oturumu Başlat</button>
+        </div>
+    </div>
+
+    <div id="game-container">
+        <div id="terminal-panel" class="panel">
+            <div id="terminal-output"></div>
+            <span class="cursor" id="cursor"></span>
+        </div>
+        <div id="editor-panel" class="panel">
+            <div class="header">
+                <div class="nav-controls">
+                    <button class="nav-btn" id="btn-prev" onclick="navigateLevel(-1)">[ < ]</button>
+                    <span id="level-title">Project: CORE - C# Module</span>
+                    <button class="nav-btn" id="btn-next" onclick="navigateLevel(1)">[ > ]</button>
+                </div>
+                <div class="stats">
+                    <span id="score-counter">Puan: 0</span>
+                    <span id="error-counter">Hata: 0/2</span>
+                </div>
+            </div>
+            
+            <div class="editor-wrapper">
+                <textarea id="code-editor" spellcheck="false" placeholder="C# kodlarını buraya yaz..."></textarea>
+                <div id="editor-overlay"></div>
+            </div>
+
+            <div class="controls">
+                <button class="action-btn" id="btn-run" onclick="executeCode()">[ KODU ÇALIŞTIR ]</button>
+                <button class="action-btn" id="btn-help" onclick="triggerGhostCoderManual()">[ YARDIM İSTE ]</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="leaderboard-screen" class="fullscreen-overlay">
+        <h1 class="glitch-text">GÖREV TAMAMLANDI</h1>
+        <h3>CORE Sistemi Devrede</h3>
+        <table class="leaderboard-table">
+            <thead><tr><th>Sıra</th><th>Ajan (Nickname)</th><th>Puan</th></tr></thead>
+            <tbody id="leaderboard-body"></tbody>
+        </table>
+        <button class="btn-main" onclick="location.reload()">Yeni Oturum Aç</button>
+    </div>
+
+    <div id="admin-panel">
+        <div class="admin-header">
+            <h1>CORE // GOD_MODE [ADMIN]</h1>
+            <div>
+                <button class="admin-btn danger" onclick="clearLeaderboard()">[ SİSTEMİ TEMİZLE (PURGE) ]</button>
+                <button class="admin-btn" onclick="location.reload()">[ GÜVENLİ ÇIKIŞ ]</button>
+            </div>
+        </div>
+        <div class="admin-grid">
+            <div class="admin-left-col">
+                <div class="admin-box" style="flex: 0.4;">
+                    <h3 style="border-bottom-color: var(--neon-gold);">GLOBAL LEADERBOARD</h3>
+                    <table style="width: 100%; text-align: left; border-collapse: collapse;">
+                        <thead><tr><th style="padding-bottom:10px; color:var(--neon-gold)">Ajan</th><th style="padding-bottom:10px; color:var(--neon-gold)">Puan</th></tr></thead>
+                        <tbody id="admin-leaderboard-body"></tbody>
+                    </table>
+                </div>
+                <div class="admin-box">
+                    <h3>CANLI İŞLEM AKIŞI (LIVE FEED)</h3>
+                    <div id="live-feed">
+                        <div class="log-entry"><span class="log-time">SİSTEM</span><span class="log-action success">Admin paneline erişim sağlandı. Diğer sekmeler dinleniyor...</span></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="admin-right-col admin-box">
+                <h3 style="border-bottom-color: var(--neon-blue);">
+                    BİREBİR AJAN İZLEME (LIVE)
+                    <div style="display:flex; gap:10px; align-items:center;">
+                        <button class="admin-btn" onclick="showCorrectAnswer()" style="padding: 3px 10px; font-size: 0.8rem; border-color: var(--neon-green); color: var(--neon-green);">[ DOĞRU CEVABI GÖSTER ]</button>
+                        <select id="admin-agent-select" onchange="watchAgent(this.value)">
+                            <option value="">Ajan Seçin...</option>
+                        </select>
+                    </div>
+                </h3>
+                <div class="watch-container">
+                    <div class="watch-box" id="admin-watch-terminal">[SİSTEM]: Lütfen izlemek için üstteki listeden aktif bir ajan seçin...</div>
+                    <div style="position:relative; flex:1; display:flex;">
+                        <textarea class="watch-box watch-code" id="admin-watch-code" readonly placeholder="// Seçilen ajanın kodu anlık olarak burada belirecek..."></textarea>
+                        <div id="admin-watch-overlay"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function escapeHTML(str) { return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+
+        // --- HARF BAZLI LSC (Longest Common Subsequence) DIFF FONKSİYONU ---
+        // Kullanıcının kodu ile mentor kodunu harf harf karşılaştırıp HTML (Kırmızı/Yeşil) döndürür
+        function generateCharDiffHTML(userStr, correctStr) {
+            const dp = Array(userStr.length + 1).fill(null).map(() => Array(correctStr.length + 1).fill(0));
+            for (let r = 1; r <= userStr.length; r++) {
+                for (let c = 1; c <= correctStr.length; c++) {
+                    if (userStr[r-1] === correctStr[c-1]) dp[r][c] = dp[r-1][c-1] + 1;
+                    else dp[r][c] = Math.max(dp[r-1][c], dp[r][c-1]);
+                }
+            }
+            let r = userStr.length, c = correctStr.length;
+            let result = [];
+            while (r > 0 || c > 0) {
+                if (r > 0 && c > 0 && userStr[r-1] === correctStr[c-1]) {
+                    result.push({char: userStr[r-1], type: 'green'}); r--; c--;
+                } else if (c > 0 && (r === 0 || dp[r][c-1] >= dp[r-1][c])) {
+                    c--; 
+                } else if (r > 0 && (c === 0 || dp[r][c-1] < dp[r-1][c])) {
+                    result.push({char: userStr[r-1], type: 'red'}); r--; 
+                }
+            }
+            result.reverse();
+            let html = "";
+            result.forEach(item => {
+                html += `<span class="${item.type === 'green' ? 'code-green' : 'code-red'}">${escapeHTML(item.char)}</span>`;
+            });
+            return html;
+        }
+
+        // === KATI SÖZDİZİMİ (STRICT SYNTAX) KONTROLÜ ===
+        const levels = [
+            {
+                title: "Bölüm 1: Veri Dönüşümü",
+                intro: "[SİSTEM]: CORE Güç Modülü yanıt vermiyor. Güç protokolü şifrelendi.\n[GÖREV]: 'gucVerisi' stringini int veri tipine çevirip tam olarak 'guc' adında bir değişkene atamalısın.",
+                initialCode: "string gucVerisi = \"404\";\n// string'i int'e çevir ve 'guc' değişkenine ata:\n",
+                validation: (code) => { 
+                    let c = code.replace(/\s+/g, ''); 
+                    return c.includes('stringgucVerisi="404";') && (c.includes('intguc=int.Parse(gucVerisi);') || c.includes('intguc=Convert.ToInt32(gucVerisi);')); 
+                },
+                keywords: ["int", "guc", "Parse", "gucVerisi", ";"],
+                success: "Güç modülü tamsayı verisini kabul etti. Sistem çevrimiçi.",
+                mentor: "Dostum, tip güvenli dillerde dönüşümleri int.Parse ile yaparız. Noktalı virgülü de unutmamak gerek! Kodu senin için düzeltiyorum, dikkatle izle.",
+                mentorCode: "string gucVerisi = \"404\";\nint guc = int.Parse(gucVerisi);"
+            },
+            {
+                title: "Bölüm 2: String Manipülasyonu",
+                intro: "[SİSTEM]: Bellek kayıtları okunamıyor. Komutlar bozuk formatta.\n[GÖREV]: 'komut' stringini tamamen BÜYÜK HARFE çevir ve başındaki/sonundaki boşlukları temizleyerek tam olarak 'temizKomut' değişkenine ata.",
+                initialCode: "string komut = \"   cOre sYstem reset   \";\n",
+                validation: (code) => { 
+                    let c = code.replace(/\s+/g, ''); 
+                    return c.includes('stringkomut="cOresYstemreset";') && (c.includes('stringtemizKomut=komut.Trim().ToUpper();') || c.includes('stringtemizKomut=komut.ToUpper().Trim();')); 
+                },
+                keywords: ["temizKomut", "ToUpper", "Trim", ";"],
+                success: "Temizlik başarılı! Bellek okuma hatası giderildi.",
+                mentor: "Dışarıdan gelen veriye asla güvenmeyiz. .Trim() ve .ToUpper() hayat kurtarır:",
+                mentorCode: "string komut = \"   cOre sYstem reset   \";\nstring temizKomut = komut.Trim().ToUpper();"
+            },
+            {
+                title: "Bölüm 3: Karşılaştırma",
+                intro: "[SİSTEM]: Çekirdek ısısı kritik seviyelerde.\n[GÖREV]: 'isi' 50'den büyükse \"TEHLİKE\", değilse \"NORMAL\" yazdıran bir if-else bloğu oluştur.",
+                initialCode: "int isi = 65;\n",
+                validation: (code) => {
+                    let c = code.replace(/\s+/g, '').replace(/'/g, '"').replace(/`/g, '"');
+                    return c.includes('intisi=65;') && c.includes('if(isi>50){Console.WriteLine("TEHLİKE");}else{Console.WriteLine("NORMAL");}');
+                },
+                keywords: ["if", "isi", ">50", "TEHLİKE", "else", "NORMAL", ";"],
+                success: "Soğutma protokolü çalışıyor.",
+                mentor: "Algoritmaların beyni karar mekanizmalarıdır:",
+                mentorCode: "int isi = 65;\nif (isi > 50) {\n    Console.WriteLine(\"TEHLİKE\");\n} else {\n    Console.WriteLine(\"NORMAL\");\n}"
+            },
+            {
+                title: "Bölüm 4: Random Değer",
+                intro: "[SİSTEM]: Güvenlik duvarı yetkisiz erişimi engelliyor.\n[GÖREV]: Random sınıfından nesne türet ('rnd' adında) ve 1 ile 100 arasında rastgele bir sayı üretip 'port' değişkenine ata.",
+                initialCode: "// Random nesnesi oluştur ve değer üret:\n",
+                validation: (code) => {
+                    let c = code.replace(/\s+/g, '');
+                    return c.includes('Randomrnd=newRandom();') && (c.includes('intport=rnd.Next(1,100);') || c.includes('intport=rnd.Next(1,101);'));
+                },
+                keywords: ["Random", "rnd", "Next", "port", ";"],
+                success: "Rastgele port tüneli açıldı.",
+                mentor: "C#'ta Random sınıfından bir nesne ('instance') oluşturup .Next() metodunu kullanırız:",
+                mentorCode: "Random rnd = new Random();\nint port = rnd.Next(1, 101);"
+            },
+            {
+                title: "Bölüm 5: Math Modülü",
+                intro: "[SİSTEM]: CORE yapay zekasının vektörleri bozuldu.\n[GÖREV]: Math sınıfını kullanarak 144 değerinin karekökünü (Sqrt) al ve tam olarak 'koordinat' değişkenine (double) ata.",
+                initialCode: "double sinyal = 144;\n",
+                validation: (code) => {
+                    let c = code.replace(/\s+/g, '');
+                    return c.includes('doublesinyal=144;') && (c.includes('doublekoordinat=Math.Sqrt(sinyal);') || c.includes('doublekoordinat=Math.Sqrt(144);'));
+                },
+                keywords: ["Math.Sqrt", "koordinat", "sinyal", ";"],
+                success: "CORE sistemi onarıldı.",
+                mentor: "Math.Sqrt karekök alır. İşi bitiren kodu yazıyorum. Seninle çalışmak güzeldi!",
+                mentorCode: "double sinyal = 144;\ndouble koordinat = Math.Sqrt(sinyal);"
+            }
+        ];
+
+        let currentPlayerName = ""; let totalScore = 0; let currentLevelIndex = 0;
+        let maxReachedLevel = 0; let errorsInCurrentLevel = 0; let isTyping = false;
+
+        const terminalEl = document.getElementById("terminal-output"); const editorEl = document.getElementById("code-editor");
+        const editorOverlay = document.getElementById("editor-overlay"); const titleEl = document.getElementById("level-title");
+        const errorCounterEl = document.getElementById("error-counter"); const scoreCounterEl = document.getElementById("score-counter");
+        const runBtn = document.getElementById("btn-run"); const helpBtn = document.getElementById("btn-help");
+
+        const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+        function broadcastAction(actionType, detail) {
+            if(!currentPlayerName || currentPlayerName === "wax0fpsz") return;
+            const eventData = { user: currentPlayerName, level: currentLevelIndex + 1, type: actionType, detail: detail, time: new Date().toLocaleTimeString('tr-TR', { hour12: false }) };
+            localStorage.setItem("core_live_event", JSON.stringify({ ...eventData, _rnd: Math.random() }));
+        }
+
+        function syncPlayerState() {
+            if(!currentPlayerName || currentPlayerName === "wax0fpsz") return;
+            const state = { code: editorEl.value, terminal: terminalEl.innerHTML, overlayHTML: editorOverlay.innerHTML, overlayDisplay: editorOverlay.style.display, levelIndex: currentLevelIndex, time: Date.now() };
+            localStorage.setItem('core_sync_' + currentPlayerName, JSON.stringify(state));
+        }
+
+        let typingTimer;
+        editorEl.addEventListener('input', () => {
+            syncPlayerState(); clearTimeout(typingTimer);
+            typingTimer = setTimeout(() => { broadcastAction('typing', 'kod yazıyor...'); }, 1000);
+        });
+
+        function goToLogin() { document.getElementById("start-screen").style.display = "none"; document.getElementById("login-screen").style.display = "flex"; }
+
+        function initGame() {
+            const nickInput = document.getElementById("player-nickname").value.trim();
+            if (nickInput === "wax0fpsz") { initAdminPanel(); return; }
+            if (nickInput.length < 3) { alert("Lütfen geçerli bir Nickname girin."); return; }
+            currentPlayerName = nickInput; document.getElementById("login-screen").style.display = "none"; document.getElementById("game-container").style.display = "flex";
+            broadcastAction('login', 'Sisteme giriş yaptı.'); loadLevel();
+        }
+
+        async function typeWriter(text, className = "system-msg", speed = 20, instant = false) {
+            isTyping = true; if(!instant) toggleControls(false);
+            const span = document.createElement("span"); span.className = className; terminalEl.appendChild(span);
+            if (instant) { span.textContent = text; syncPlayerState(); } 
+            else {
+                for (let i = 0; i < text.length; i++) {
+                    span.textContent += text.charAt(i); terminalEl.parentElement.scrollTop = terminalEl.parentElement.scrollHeight;
+                    syncPlayerState(); await sleep(speed);
+                }
+            }
+            terminalEl.appendChild(document.createElement("br")); terminalEl.appendChild(document.createElement("br"));
+            terminalEl.parentElement.scrollTop = terminalEl.parentElement.scrollHeight; syncPlayerState();
+            isTyping = false; if(!instant) toggleControls(true);
+        }
+
+        function toggleControls(state) {
+            if(currentLevelIndex < maxReachedLevel) { runBtn.disabled = true; helpBtn.disabled = true; editorEl.disabled = true; } 
+            else { runBtn.disabled = !state; helpBtn.disabled = !state; editorEl.disabled = !state; }
+        }
+
+        function navigateLevel(direction) {
+            if (isTyping) return; const newLevel = currentLevelIndex + direction;
+            if (newLevel >= 0 && newLevel <= maxReachedLevel && newLevel < levels.length) { currentLevelIndex = newLevel; loadLevel(); }
+        }
+
+        async function loadLevel() {
+            if (currentLevelIndex >= levels.length) { endGame(); return; }
+            terminalEl.innerHTML = ""; syncPlayerState();
+            const level = levels[currentLevelIndex];
+            errorsInCurrentLevel = 0; updateUI(); titleEl.textContent = level.title;
+            editorOverlay.style.display = "none"; editorEl.style.color = "var(--text-color)";
+
+            if (currentLevelIndex < maxReachedLevel) {
+                editorEl.value = level.mentorCode; toggleControls(false); syncPlayerState();
+                await typeWriter(`=== ${level.title.toUpperCase()} (TAMAMLANDI) ===`, "system-msg", 0, true);
+                await typeWriter(level.intro, "system-msg", 0, true);
+                await typeWriter(`[BAŞARILI]: ${level.success}`, "success-msg", 0, true);
+            } else {
+                broadcastAction('level_start', `Bölüm görevini okuyor.`);
+                editorEl.value = level.initialCode; toggleControls(true); syncPlayerState();
+                await typeWriter(`=== ${level.title.toUpperCase()} ===`, "system-msg", 30);
+                await typeWriter(level.intro, "system-msg", 20);
+            }
+        }
+
+        async function executeCode() {
+            if (isTyping || currentLevelIndex < maxReachedLevel) return;
+            const userCode = editorEl.value; const level = levels[currentLevelIndex];
+            await typeWriter("> KOD DERLENİYOR...", "system-msg", 30); await sleep(500);
+
+            if (level.validation(userCode)) {
+                await typeWriter(`[BAŞARILI]: ${level.success}`, "success-msg", 30);
+                let earnedPoints = 100 - (errorsInCurrentLevel * 30); totalScore += earnedPoints;
+                broadcastAction('success', `Doğru kodu yazdı! (+${earnedPoints} Puan)`);
+                maxReachedLevel++; currentLevelIndex++; await sleep(1500); loadLevel();
+            } else {
+                errorsInCurrentLevel++; updateUI();
+                
+                editorOverlay.style.display = "block"; editorEl.style.color = "transparent"; 
+                editorOverlay.innerHTML = generateCharDiffHTML(userCode, level.mentorCode);
+                syncPlayerState();
+
+                await typeWriter("> KOD ANALİZİ: Yanlış/Fazla harfler kırmızı ile filtrelendi...", "system-msg", 15);
+                await sleep(2500); 
+                
+                if (errorsInCurrentLevel >= 2) {
+                    await typeWriter(`[HATA]: Maksimum hata limiti. Mentor bağlantısı kuruluyor...`, "error-msg", 20);
+                    broadcastAction('error', `Kod derleme hatası aldı. (Hata: ${errorsInCurrentLevel}/2) Ghost Coder tetiklendi.`);
+                    await sleep(1000); triggerGhostCoder(userCode, level.mentorCode);
+                } else {
+                    editorOverlay.style.display = "none"; editorEl.style.color = "var(--text-color)"; syncPlayerState();
+
+                    let cleanUser = userCode.replace(/\s+/g, '');
+                    let errorMsg = "Sözdizimi hatası veya eksik/yanlış değişken adı! Sana bir şans daha veriyorum, tekrar dene.";
+                    
+                    if (cleanUser.length > 5 && !cleanUser.endsWith(';') && !cleanUser.endsWith('}')) {
+                        errorMsg = "Bir şey unuttun sanki... C#'ta komut satırları ne ile biterdi? İpucu: Noktalı virgül (;) eksik!";
+                    } else if (!cleanUser.includes('"') && level.mentorCode.includes('"')) {
+                        errorMsg = "Sözdizimi hatası! Metin (String) ifadeleri yazarken çift tırnak (\"\") kullanmayı unuttun sanırım. Bu son şansın!";
+                    } else if (!cleanUser.includes('()') && level.mentorCode.includes('()')) {
+                        errorMsg = "Sözdizimi hatası! Fonksiyon çağırırken parantezleri () unuttun. Bu son şansın!";
+                    } else {
+                        errorMsg = "Büyük/küçük harf uyumuna (Case Sensitivity) veya değişken adlarına dikkat ettin mi? C# bu konularda acımasızdır. Son şansın!";
+                    }
+
+                    await typeWriter(`[HATA]: ${errorMsg}`, "error-msg", 20);
+                    broadcastAction('error', `Kod derleme hatası aldı. (Hata: ${errorsInCurrentLevel}/2)`);
+                }
+            }
+        }
+
+        function updateUI() {
+            scoreCounterEl.textContent = `Puan: ${totalScore}`;
+            document.getElementById("btn-prev").disabled = currentLevelIndex === 0; document.getElementById("btn-next").disabled = currentLevelIndex >= maxReachedLevel;
+            if(currentLevelIndex < maxReachedLevel) { errorCounterEl.textContent = "Durum: Tamamlandı"; errorCounterEl.style.color = "var(--neon-blue)"; return; }
+            errorCounterEl.textContent = `Hata: ${errorsInCurrentLevel}/2`; errorCounterEl.style.color = errorsInCurrentLevel >= 2 ? "var(--neon-red)" : "var(--neon-green)";
+        }
+
+        function triggerGhostCoderManual() {
+            triggerGhostCoder(editorEl.value, levels[currentLevelIndex].mentorCode);
+        }
+
+        async function triggerGhostCoder(userCode, correctCode) {
+            if (isTyping || currentLevelIndex < maxReachedLevel) return;
+            isTyping = true; toggleControls(false); const level = levels[currentLevelIndex];
+            broadcastAction('help', `Yardım/Ghost Coder sistemini tetikledi.`);
+
+            await typeWriter("! UYARI: UZAKTAN BAĞLANTI KURULUYOR...", "error-msg", 40); await sleep(500);
+            await typeWriter(">> SANAL MENTOR SİSTEME SIZDI <<", "success-msg", 40); await sleep(800);
+            await typeWriter(`[Sanal Mentor]: ${level.mentor}`, "mentor-msg", 30); await sleep(1000);
+
+            if(editorOverlay.style.display !== "block") {
+                editorOverlay.style.display = "block"; editorEl.style.color = "transparent"; 
+                editorOverlay.innerHTML = generateCharDiffHTML(userCode, correctCode);
+                syncPlayerState(); await sleep(1000);
+            }
+
+            editorOverlay.innerHTML = ""; syncPlayerState(); await sleep(500);
+            
+            let typedSoFar = "";
+            for(let i=0; i < correctCode.length; i++) {
+                typedSoFar += correctCode[i];
+                editorOverlay.innerHTML = `<span class="code-green">${escapeHTML(typedSoFar)}</span>`;
+                syncPlayerState(); await sleep(20 + Math.random() * 30);
+            }
+
+            await sleep(800);
+            editorEl.value = correctCode; editorEl.style.color = "var(--text-color)"; editorOverlay.style.display = "none"; syncPlayerState();
+
+            await typeWriter("[Sanal Mentor]: Kodun onarıldı, üzerinden geçebilirsin. İlerleyelim...", "mentor-msg", 30);
+            isTyping = false; 
+            
+            let accuracy = 0;
+            for(let i=0; i < Math.min(userCode.length, correctCode.length); i++) {
+                if(userCode[i] === correctCode[i]) accuracy++;
+            }
+            let ratio = correctCode.length > 0 ? (accuracy / correctCode.length) : 0;
+            totalScore += 10 + Math.floor(ratio * 40); 
+            
+            await sleep(1000); await typeWriter(`[BAŞARILI]: ${level.success}`, "success-msg", 30);
+            maxReachedLevel++; currentLevelIndex++; await sleep(2000); loadLevel();
+        }
+
+        function endGame() {
+            broadcastAction('finish', `Tüm sistemi onardı. Oyun bitti! Total Skor: ${totalScore}`);
+            document.getElementById("game-container").style.display = "none"; document.getElementById("leaderboard-screen").style.display = "flex";
+            saveAndShowLeaderboard();
+        }
+
+        function saveAndShowLeaderboard() {
+            let scores = JSON.parse(localStorage.getItem("coreLeaderboard")) || [];
+            if(currentPlayerName !== "wax0fpsz" && currentPlayerName !== "") {
+                scores.push({ name: currentPlayerName, score: totalScore }); scores.sort((a, b) => b.score - a.score); scores = scores.slice(0, 10);
+                localStorage.setItem("coreLeaderboard", JSON.stringify(scores));
+            }
+            const tbody = document.getElementById("leaderboard-body"); tbody.innerHTML = "";
+            scores.forEach((p, i) => { tbody.innerHTML += `<tr><td>#${i + 1}</td><td>${p.name}</td><td>${p.score} XP</td></tr>`; });
+        }
+
+        // === ADMIN PANELİ (GOD MODE) ===
+        let currentWatchedAgent = "";
+
+        function initAdminPanel() {
+            document.getElementById("login-screen").style.display = "none"; document.getElementById("admin-panel").style.display = "flex";
+            refreshAdminLeaderboard(); refreshAgentList(); setInterval(refreshAgentList, 3000);
+            window.addEventListener('storage', (e) => {
+                if (e.key === 'core_live_event') addLiveFeedLog(JSON.parse(e.newValue));
+                if (e.key === 'core_sync_' + currentWatchedAgent) updateWatchView();
+            });
+        }
+
+        function refreshAdminLeaderboard() {
+            let scores = JSON.parse(localStorage.getItem("coreLeaderboard")) || [];
+            const tbody = document.getElementById("admin-leaderboard-body"); tbody.innerHTML = "";
+            if(scores.length === 0) { tbody.innerHTML = "<tr><td colspan='2' style='color:#555;'>Veritabanı boş.</td></tr>"; return; }
+            scores.forEach(p => { tbody.innerHTML += `<tr><td>${p.name}</td><td style='color:var(--neon-green)'>${p.score}</td></tr>`; });
+        }
+
+        function refreshAgentList() {
+            const select = document.getElementById("admin-agent-select"); const currentVal = select.value;
+            let optionsHtml = '<option value="">Ajan Seçin...</option>'; let foundAgents = false;
+            for(let i=0; i<localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if(key && key.startsWith('core_sync_')) {
+                    const agentName = key.replace('core_sync_', ''); optionsHtml += `<option value="${agentName}">${agentName}</option>`; foundAgents = true;
+                }
+            }
+            if(!foundAgents) optionsHtml = '<option value="">Aktif ajan yok...</option>';
+            select.innerHTML = optionsHtml; if(currentVal && select.querySelector(`option[value="${currentVal}"]`)) select.value = currentVal;
+        }
+
+        function watchAgent(agentName) { currentWatchedAgent = agentName; updateWatchView(); }
+
+        function updateWatchView() {
+            const term = document.getElementById("admin-watch-terminal"); const code = document.getElementById("admin-watch-code"); const overlay = document.getElementById("admin-watch-overlay");
+            if(!currentWatchedAgent) { term.innerHTML = "[SİSTEM]: Lütfen izlemek için üstteki listeden aktif bir ajan seçin..."; code.value = ""; overlay.style.display = "none"; return; }
+            const dataStr = localStorage.getItem('core_sync_' + currentWatchedAgent);
+            if(dataStr) {
+                const data = JSON.parse(dataStr); term.innerHTML = data.terminal || ""; code.value = data.code || "";
+                if(data.overlayDisplay === "block") { code.style.color = "transparent"; overlay.style.display = "block"; overlay.innerHTML = data.overlayHTML || ""; } 
+                else { code.style.color = "var(--text-color)"; overlay.style.display = "none"; overlay.innerHTML = ""; }
+                term.scrollTop = term.scrollHeight;
+            }
+        }
+
+        function showCorrectAnswer() {
+            if(!currentWatchedAgent) return alert("SİSTEM: Lütfen önce bir ajan seçin.");
+            const dataStr = localStorage.getItem('core_sync_' + currentWatchedAgent);
+            if(dataStr) {
+                const data = JSON.parse(dataStr); const lvl = levels[data.levelIndex];
+                if(lvl) alert(`=== BÖLÜM ${data.levelIndex + 1}: ${lvl.title.toUpperCase()} ===\n\nDOĞRU CEVAP (MENTOR KODU):\n${lvl.mentorCode}`);
+                else alert("Ajan şu an tüm görevleri bitirmiş durumda.");
+            }
+        }
+
+        function clearLeaderboard() {
+            if(confirm("DİKKAT: Tüm oyuncu verileri silinecek. Emin misin?")) {
+                localStorage.removeItem("coreLeaderboard"); const keysToRemove = [];
+                for(let i=0; i<localStorage.length; i++) { if(localStorage.key(i) && localStorage.key(i).startsWith('core_sync_')) keysToRemove.push(localStorage.key(i)); }
+                keysToRemove.forEach(k => localStorage.removeItem(k));
+                refreshAdminLeaderboard(); refreshAgentList(); watchAgent(""); 
+                addLiveFeedLog({ user: "ADMIN", level: "-", type: "error", detail: "TÜM SİSTEM VE LEADERBOARD SIFIRLANDI (PURGED).", time: new Date().toLocaleTimeString('tr-TR', {hour12:false}) });
+            }
+        }
+
+        function addLiveFeedLog(data) {
+            const feed = document.getElementById("live-feed"); let actionClass = "log-action";
+            if(data.type === 'typing') actionClass += " typing"; if(data.type === 'error') actionClass += " error";
+            if(data.type === 'success' || data.type === 'finish') actionClass += " success"; if(data.type === 'help') actionClass += " error"; 
+            const entry = document.createElement("div"); entry.className = "log-entry";
+            entry.innerHTML = `<span class="log-time">[${data.time}]</span> <span class="log-user">${data.user}</span> <span style="color:#555">(Bölüm ${data.level}):</span> <span class="${actionClass}">${data.detail}</span>`;
+            feed.prepend(entry); if(feed.children.length > 50) feed.removeChild(feed.lastChild); 
+            if(data.type === 'finish') setTimeout(refreshAdminLeaderboard, 1000);
+        }
+    </script>
+</body>
+</html>
