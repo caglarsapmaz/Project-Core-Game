@@ -2,10 +2,13 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Project: CORE - C# Training Simulator</title>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg width='32' height='32' viewBox='0 0 8 6' xmlns='http://www.w3.org/2000/svg' shape-rendering='crispEdges'><rect x='0' y='0' width='8' height='6' fill='%23111'/><rect x='1' y='2' width='6' height='4' fill='%23ffcc99'/><rect x='1' y='2' width='6' height='1' fill='%23000'/><rect x='2' y='3' width='4' height='1' fill='%2300ff41'/></svg>">
     
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
     <style>
         @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap');
 
@@ -30,8 +33,8 @@
         .btn-main:hover { background-color: var(--neon-green); color: var(--bg-color); box-shadow: 0 0 20px var(--neon-green); }
 
         #login-screen { display: none; }
-        .input-group { display: flex; flex-direction: column; align-items: center; gap: 15px; }
-        .input-group input { background-color: #111; border: 1px solid var(--neon-blue); color: var(--neon-blue); padding: 15px; font-size: 1.2rem; font-family: 'JetBrains Mono', monospace; text-align: center; width: 300px; max-width: 90%; outline: none; }
+        .input-group { display: flex; flex-direction: column; align-items: center; gap: 15px; width: 100%; }
+        .input-group input { background-color: #111; border: 1px solid var(--neon-blue); color: var(--neon-blue); padding: 15px; font-size: 16px; font-family: 'JetBrains Mono', monospace; text-align: center; width: 300px; max-width: 90%; outline: none; }
         .input-group input:focus { box-shadow: 0 0 15px rgba(0, 240, 255, 0.3); }
 
         #leaderboard-screen { display: none; z-index: 15; }
@@ -64,12 +67,12 @@
         #score-counter { color: var(--neon-gold); font-weight: bold; }
         
         .editor-wrapper { position: relative; flex: 1; display: flex; flex-direction: column; }
-        #code-editor { flex: 1; background-color: transparent; color: var(--text-color); font-family: 'JetBrains Mono', monospace; font-size: 14px; padding: 20px; border: none; resize: none; outline: none; line-height: 1.5; z-index: 1; }
+        #code-editor { flex: 1; background-color: transparent; color: var(--text-color); font-family: 'JetBrains Mono', monospace; font-size: 16px; padding: 20px; border: none; resize: none; outline: none; line-height: 1.5; z-index: 1; }
         
         #editor-overlay { 
             position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
             background-color: transparent; color: var(--text-color);
-            font-family: 'JetBrains Mono', monospace; font-size: 14px; 
+            font-family: 'JetBrains Mono', monospace; font-size: 16px; 
             padding: 20px; box-sizing: border-box; display: none; 
             white-space: pre-wrap; word-wrap: break-word; pointer-events: none; 
             line-height: 1.5; z-index: 2;
@@ -122,18 +125,11 @@
 
         /* --- MOBİL UYUMLULUK (RESPONSIVE DESIGN) --- */
         @media (max-width: 768px) {
-            body { 
-                height: auto; min-height: 100vh; overflow-y: auto; padding: 10px; display: block;
-            }
-            
+            body { height: auto; min-height: 100vh; overflow-y: auto; padding: 10px; display: block; }
             h1.glitch-text { font-size: 2.2rem; }
             .fullscreen-overlay h3 { font-size: 1rem; }
             
-            #game-container { 
-                flex-direction: column; display: none; /* JS will change this to flex when active */
-                height: auto; min-height: 100vh;
-            }
-            
+            #game-container { flex-direction: column; height: auto; min-height: 100vh; }
             .panel { flex: none; min-height: 350px; }
             #terminal-panel { min-height: 250px; }
             
@@ -144,7 +140,6 @@
             .controls { flex-direction: column; }
             button.action-btn { width: 100%; }
             
-            /* Admin Panel Mobil Ayarları */
             #admin-panel { position: static; height: auto; min-height: 100vh; }
             .admin-header { flex-direction: column; gap: 15px; text-align: center; }
             .admin-header div { display: flex; flex-direction: column; gap: 10px; width: 100%; }
@@ -248,7 +243,7 @@
                 <div class="admin-box">
                     <h3>CANLI İŞLEM AKIŞI (LIVE FEED)</h3>
                     <div id="live-feed">
-                        <div class="log-entry"><span class="log-time">SİSTEM</span><span class="log-action success">Admin paneline erişim sağlandı. Diğer sekmeler dinleniyor...</span></div>
+                        <div class="log-entry"><span class="log-time">SİSTEM</span><span class="log-action success">Admin paneline erişim sağlandı. Sistem dinleniyor...</span></div>
                     </div>
                 </div>
             </div>
@@ -275,10 +270,26 @@
     </div>
 
     <script>
+        // =========================================================================
+        // FIREBASE BAĞLANTISI 
+        // =========================================================================
+        const firebaseConfig = {
+            apiKey: "AIzaSyCeV6N8bu-I0cbu1_G4KJ3-CFJGtUP01AM",
+            authDomain: "project-core-b92d9.firebaseapp.com",
+            databaseURL: "https://project-core-b92d9-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "project-core-b92d9",
+            storageBucket: "project-core-b92d9.firebasestorage.app",
+            messagingSenderId: "108654241526",
+            appId: "1:108654241526:web:66632bfd9844a2227deed7"
+        };
+        
+        // Firebase'i Başlat
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+        // =========================================================================
+
         function escapeHTML(str) { return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
 
-        // --- HARF BAZLI LSC (Longest Common Subsequence) DIFF FONKSİYONU ---
-        // Kullanıcının kodu ile mentor kodunu harf harf karşılaştırıp HTML (Kırmızı/Yeşil) döndürür
         function generateCharDiffHTML(userStr, correctStr) {
             const dp = Array(userStr.length + 1).fill(null).map(() => Array(correctStr.length + 1).fill(0));
             for (let r = 1; r <= userStr.length; r++) {
@@ -306,7 +317,6 @@
             return html;
         }
 
-        // === KATI SÖZDİZİMİ (STRICT SYNTAX) KONTROLÜ ===
         const levels = [
             {
                 title: "Bölüm 1: Veri Dönüşümü",
@@ -385,16 +395,17 @@
 
         const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
+        // --- FIREBASE VERİ GÖNDERİM FONKSİYONLARI ---
         function broadcastAction(actionType, detail) {
             if(!currentPlayerName || currentPlayerName === "wax0fpsz") return;
             const eventData = { user: currentPlayerName, level: currentLevelIndex + 1, type: actionType, detail: detail, time: new Date().toLocaleTimeString('tr-TR', { hour12: false }) };
-            localStorage.setItem("core_live_event", JSON.stringify({ ...eventData, _rnd: Math.random() }));
+            db.ref('live_feed').push(eventData); 
         }
 
         function syncPlayerState() {
             if(!currentPlayerName || currentPlayerName === "wax0fpsz") return;
             const state = { code: editorEl.value, terminal: terminalEl.innerHTML, overlayHTML: editorOverlay.innerHTML, overlayDisplay: editorOverlay.style.display, levelIndex: currentLevelIndex, time: Date.now() };
-            localStorage.setItem('core_sync_' + currentPlayerName, JSON.stringify(state));
+            db.ref('agents/' + currentPlayerName).set(state); 
         }
 
         let typingTimer;
@@ -563,89 +574,122 @@
         }
 
         function saveAndShowLeaderboard() {
-            let scores = JSON.parse(localStorage.getItem("coreLeaderboard")) || [];
             if(currentPlayerName !== "wax0fpsz" && currentPlayerName !== "") {
-                scores.push({ name: currentPlayerName, score: totalScore }); scores.sort((a, b) => b.score - a.score); scores = scores.slice(0, 10);
-                localStorage.setItem("coreLeaderboard", JSON.stringify(scores));
+                db.ref('leaderboard/' + currentPlayerName).once('value').then((snapshot) => {
+                    let currentScore = snapshot.val() ? snapshot.val().score : 0;
+                    if(totalScore > currentScore) { 
+                         db.ref('leaderboard/' + currentPlayerName).set({ name: currentPlayerName, score: totalScore });
+                    }
+                });
             }
-            const tbody = document.getElementById("leaderboard-body"); tbody.innerHTML = "";
-            scores.forEach((p, i) => { tbody.innerHTML += `<tr><td>#${i + 1}</td><td>${p.name}</td><td>${p.score} XP</td></tr>`; });
         }
 
-        // === ADMIN PANELİ (GOD MODE) ===
+        // === ADMIN PANELİ (GOD MODE - FIREBASE SENKRONİZASYONLU) ===
         let currentWatchedAgent = "";
+        let watchRef = null;
 
         function initAdminPanel() {
             document.getElementById("login-screen").style.display = "none"; document.getElementById("admin-panel").style.display = "flex";
-            refreshAdminLeaderboard(); refreshAgentList(); setInterval(refreshAgentList, 3000);
-            window.addEventListener('storage', (e) => {
-                if (e.key === 'core_live_event') addLiveFeedLog(JSON.parse(e.newValue));
-                if (e.key === 'core_sync_' + currentWatchedAgent) updateWatchView();
+            
+            db.ref('live_feed').limitToLast(50).on('child_added', (snapshot) => {
+                addLiveFeedLog(snapshot.val());
+            });
+
+            db.ref('agents').on('value', (snapshot) => {
+                refreshAgentList(snapshot.val());
+            });
+
+            db.ref('leaderboard').on('value', (snapshot) => {
+                refreshAdminLeaderboard(snapshot.val());
             });
         }
 
-        function refreshAdminLeaderboard() {
-            let scores = JSON.parse(localStorage.getItem("coreLeaderboard")) || [];
+        function refreshAdminLeaderboard(scoresObj) {
             const tbody = document.getElementById("admin-leaderboard-body"); tbody.innerHTML = "";
-            if(scores.length === 0) { tbody.innerHTML = "<tr><td colspan='2' style='color:#555;'>Veritabanı boş.</td></tr>"; return; }
-            scores.forEach(p => { tbody.innerHTML += `<tr><td>${p.name}</td><td style='color:var(--neon-green)'>${p.score}</td></tr>`; });
+            const leaderboardTbody = document.getElementById("leaderboard-body"); if(leaderboardTbody) leaderboardTbody.innerHTML = "";
+            
+            if(!scoresObj) { 
+                let emptyRow = "<tr><td colspan='2' style='color:#555;'>Veritabanı boş.</td></tr>";
+                tbody.innerHTML = emptyRow; 
+                if(leaderboardTbody) leaderboardTbody.innerHTML = emptyRow;
+                return; 
+            }
+
+            let scoresArray = Object.values(scoresObj);
+            scoresArray.sort((a, b) => b.score - a.score);
+            
+            scoresArray.slice(0, 10).forEach((p, i) => { 
+                tbody.innerHTML += `<tr><td>${p.name}</td><td style='color:var(--neon-green)'>${p.score}</td></tr>`; 
+                if(leaderboardTbody) leaderboardTbody.innerHTML += `<tr><td>#${i + 1}</td><td>${p.name}</td><td>${p.score} XP</td></tr>`;
+            });
         }
 
-        function refreshAgentList() {
+        function refreshAgentList(agentsObj) {
             const select = document.getElementById("admin-agent-select"); const currentVal = select.value;
             let optionsHtml = '<option value="">Ajan Seçin...</option>'; let foundAgents = false;
-            for(let i=0; i<localStorage.length; i++) {
-                const key = localStorage.key(i);
-                if(key && key.startsWith('core_sync_')) {
-                    const agentName = key.replace('core_sync_', ''); optionsHtml += `<option value="${agentName}">${agentName}</option>`; foundAgents = true;
-                }
+            
+            if(agentsObj) {
+                Object.keys(agentsObj).forEach(agentName => {
+                    optionsHtml += `<option value="${agentName}">${agentName}</option>`; foundAgents = true;
+                });
             }
+            
             if(!foundAgents) optionsHtml = '<option value="">Aktif ajan yok...</option>';
             select.innerHTML = optionsHtml; if(currentVal && select.querySelector(`option[value="${currentVal}"]`)) select.value = currentVal;
         }
 
-        function watchAgent(agentName) { currentWatchedAgent = agentName; updateWatchView(); }
+        function watchAgent(agentName) { 
+            currentWatchedAgent = agentName; 
+            
+            if(watchRef) watchRef.off(); 
+            if(!agentName) { updateWatchView(null); return; }
 
-        function updateWatchView() {
+            watchRef = db.ref('agents/' + agentName);
+            watchRef.on('value', (snapshot) => {
+                updateWatchView(snapshot.val());
+            });
+        }
+
+        function updateWatchView(data) {
             const term = document.getElementById("admin-watch-terminal"); const code = document.getElementById("admin-watch-code"); const overlay = document.getElementById("admin-watch-overlay");
-            if(!currentWatchedAgent) { term.innerHTML = "[SİSTEM]: Lütfen izlemek için üstteki listeden aktif bir ajan seçin..."; code.value = ""; overlay.style.display = "none"; return; }
-            const dataStr = localStorage.getItem('core_sync_' + currentWatchedAgent);
-            if(dataStr) {
-                const data = JSON.parse(dataStr); term.innerHTML = data.terminal || ""; code.value = data.code || "";
-                if(data.overlayDisplay === "block") { code.style.color = "transparent"; overlay.style.display = "block"; overlay.innerHTML = data.overlayHTML || ""; } 
-                else { code.style.color = "var(--text-color)"; overlay.style.display = "none"; overlay.innerHTML = ""; }
-                term.scrollTop = term.scrollHeight;
-            }
+            if(!data) { term.innerHTML = "[SİSTEM]: Lütfen izlemek için üstteki listeden aktif bir ajan seçin..."; code.value = ""; overlay.style.display = "none"; return; }
+            
+            term.innerHTML = data.terminal || ""; code.value = data.code || "";
+            if(data.overlayDisplay === "block") { code.style.color = "transparent"; overlay.style.display = "block"; overlay.innerHTML = data.overlayHTML || ""; } 
+            else { code.style.color = "var(--text-color)"; overlay.style.display = "none"; overlay.innerHTML = ""; }
+            term.scrollTop = term.scrollHeight;
         }
 
         function showCorrectAnswer() {
             if(!currentWatchedAgent) return alert("SİSTEM: Lütfen önce bir ajan seçin.");
-            const dataStr = localStorage.getItem('core_sync_' + currentWatchedAgent);
-            if(dataStr) {
-                const data = JSON.parse(dataStr); const lvl = levels[data.levelIndex];
-                if(lvl) alert(`=== BÖLÜM ${data.levelIndex + 1}: ${lvl.title.toUpperCase()} ===\n\nDOĞRU CEVAP (MENTOR KODU):\n${lvl.mentorCode}`);
-                else alert("Ajan şu an tüm görevleri bitirmiş durumda.");
-            }
+            db.ref('agents/' + currentWatchedAgent).once('value').then((snapshot) => {
+                const data = snapshot.val();
+                if(data) {
+                    const lvl = levels[data.levelIndex];
+                    if(lvl) alert(`=== BÖLÜM ${data.levelIndex + 1}: ${lvl.title.toUpperCase()} ===\n\nDOĞRU CEVAP (MENTOR KODU):\n${lvl.mentorCode}`);
+                    else alert("Ajan şu an tüm görevleri bitirmiş durumda.");
+                }
+            });
         }
 
         function clearLeaderboard() {
             if(confirm("DİKKAT: Tüm oyuncu verileri silinecek. Emin misin?")) {
-                localStorage.removeItem("coreLeaderboard"); const keysToRemove = [];
-                for(let i=0; i<localStorage.length; i++) { if(localStorage.key(i) && localStorage.key(i).startsWith('core_sync_')) keysToRemove.push(localStorage.key(i)); }
-                keysToRemove.forEach(k => localStorage.removeItem(k));
-                refreshAdminLeaderboard(); refreshAgentList(); watchAgent(""); 
-                addLiveFeedLog({ user: "ADMIN", level: "-", type: "error", detail: "TÜM SİSTEM VE LEADERBOARD SIFIRLANDI (PURGED).", time: new Date().toLocaleTimeString('tr-TR', {hour12:false}) });
+                db.ref('leaderboard').remove();
+                db.ref('agents').remove();
+                db.ref('live_feed').remove();
+                watchAgent(""); 
+                broadcastAction('error', 'TÜM SİSTEM VE LEADERBOARD SIFIRLANDI (PURGED).');
             }
         }
 
         function addLiveFeedLog(data) {
+            if(!data) return;
             const feed = document.getElementById("live-feed"); let actionClass = "log-action";
             if(data.type === 'typing') actionClass += " typing"; if(data.type === 'error') actionClass += " error";
             if(data.type === 'success' || data.type === 'finish') actionClass += " success"; if(data.type === 'help') actionClass += " error"; 
             const entry = document.createElement("div"); entry.className = "log-entry";
             entry.innerHTML = `<span class="log-time">[${data.time}]</span> <span class="log-user">${data.user}</span> <span style="color:#555">(Bölüm ${data.level}):</span> <span class="${actionClass}">${data.detail}</span>`;
             feed.prepend(entry); if(feed.children.length > 50) feed.removeChild(feed.lastChild); 
-            if(data.type === 'finish') setTimeout(refreshAdminLeaderboard, 1000);
         }
     </script>
 </body>
