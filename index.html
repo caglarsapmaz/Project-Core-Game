@@ -31,7 +31,7 @@
 
         #login-screen { display: none; }
         .input-group { display: flex; flex-direction: column; align-items: center; gap: 15px; }
-        .input-group input { background-color: #111; border: 1px solid var(--neon-blue); color: var(--neon-blue); padding: 15px; font-size: 1.2rem; font-family: 'JetBrains Mono', monospace; text-align: center; width: 300px; outline: none; }
+        .input-group input { background-color: #111; border: 1px solid var(--neon-blue); color: var(--neon-blue); padding: 15px; font-size: 1.2rem; font-family: 'JetBrains Mono', monospace; text-align: center; width: 300px; max-width: 90%; outline: none; }
         .input-group input:focus { box-shadow: 0 0 15px rgba(0, 240, 255, 0.3); }
 
         #leaderboard-screen { display: none; z-index: 15; }
@@ -119,6 +119,43 @@
         #admin-watch-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: transparent; color: var(--text-color); padding: 15px; display: none; white-space: pre-wrap; word-wrap: break-word; pointer-events: none; z-index: 5; line-height: 1.5; font-family: 'JetBrains Mono', monospace; box-sizing: border-box; }
 
         body::after { content: " "; display: block; position: absolute; top: 0; left: 0; bottom: 0; right: 0; background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06)); z-index: 2; background-size: 100% 2px, 3px 100%; pointer-events: none; }
+
+        /* --- MOBİL UYUMLULUK (RESPONSIVE DESIGN) --- */
+        @media (max-width: 768px) {
+            body { 
+                height: auto; min-height: 100vh; overflow-y: auto; padding: 10px; display: block;
+            }
+            
+            h1.glitch-text { font-size: 2.2rem; }
+            .fullscreen-overlay h3 { font-size: 1rem; }
+            
+            #game-container { 
+                flex-direction: column; display: none; /* JS will change this to flex when active */
+                height: auto; min-height: 100vh;
+            }
+            
+            .panel { flex: none; min-height: 350px; }
+            #terminal-panel { min-height: 250px; }
+            
+            .header { flex-direction: column; gap: 12px; text-align: center; align-items: stretch; }
+            .nav-controls { justify-content: space-between; width: 100%; }
+            .stats { justify-content: space-between; width: 100%; font-size: 0.9rem; }
+            
+            .controls { flex-direction: column; }
+            button.action-btn { width: 100%; }
+            
+            /* Admin Panel Mobil Ayarları */
+            #admin-panel { position: static; height: auto; min-height: 100vh; }
+            .admin-header { flex-direction: column; gap: 15px; text-align: center; }
+            .admin-header div { display: flex; flex-direction: column; gap: 10px; width: 100%; }
+            .admin-btn { width: 100%; }
+            
+            .admin-grid { flex-direction: column; height: auto; overflow: visible; }
+            .admin-box h3 { flex-direction: column; gap: 10px; align-items: flex-start; }
+            .watch-container { flex-direction: column; }
+            .watch-box { min-height: 200px; }
+            select#admin-agent-select { width: 100%; margin-top: 5px; }
+        }
     </style>
 </head>
 <body>
@@ -219,7 +256,7 @@
             <div class="admin-right-col admin-box">
                 <h3 style="border-bottom-color: var(--neon-blue);">
                     BİREBİR AJAN İZLEME (LIVE)
-                    <div style="display:flex; gap:10px; align-items:center;">
+                    <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
                         <button class="admin-btn" onclick="showCorrectAnswer()" style="padding: 3px 10px; font-size: 0.8rem; border-color: var(--neon-green); color: var(--neon-green);">[ DOĞRU CEVABI GÖSTER ]</button>
                         <select id="admin-agent-select" onchange="watchAgent(this.value)">
                             <option value="">Ajan Seçin...</option>
