@@ -34,3 +34,10 @@ Proje tamamen istemci tarafında (Client-side) çalışır ve herhangi bir sunuc
 
 👨‍💻 Geliştirici
 Çağlar Sapmaz - www.linkedin.com/in/çağlar-sapmaz
+
+
+<img width="3024" height="1578" alt="image" src="https://github.com/user-attachments/assets/ee311d27-9c1e-4e65-902c-a360e30f8b53" />
+
+<img width="3024" height="1578" alt="image" src="https://github.com/user-attachments/assets/57124bd1-eaf0-404f-884c-7b06e01c98b5" />
+
+
