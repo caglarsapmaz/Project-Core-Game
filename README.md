@@ -22,6 +22,7 @@
 Proje tamamen istemci tarafında (Client-side) çalışır ve herhangi bir sunucu veya bağımlılık (npm, node vb.) gerektirmez. Doğrudan tarayıcı üzerinden oynanabilir.
 
 📝 Görev Listesi (Levels)
+
 *Veri Dönüşümü (String to Int / Casting)
 
 *String Manipülasyonu (ToUpper, Trim)
